@@ -73,6 +73,19 @@ class TaskInput(BaseModel):
 class CalculationRequest(BaseModel):
     tasks: List[TaskInput]
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "tasks": [
+                    {
+                        "description": "Desenvolvimento do endpoint de autenticação",
+                        "start_time": "2024-01-10T09:00:00",
+                        "end_time": "2024-01-10T11:30:00"
+                    }
+                ]
+            }
+        }
+
 class TaskOutput(TaskInput):
     duration_hours: float
     cost: float
@@ -81,12 +94,46 @@ class CalculationResponse(BaseModel):
     calculated_tasks: List[TaskOutput]
     grand_total: float
 
+class TaskListItem(BaseModel):
+    id: int
+    description: str
+    start_time: datetime
+    end_time: datetime
+    duration_hours: float
+    calculated_value: float
+    hourly_rate: float
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
 # --- Endpoints da API ---
 @app.get("/", summary="Endpoint de Health Check")
 def read_root():
     return {"status": "ok"}
 
-@app.post("/api/calculate/", response_model=CalculationResponse, summary="Calcula e salva tarefas")
+@app.post(
+    "/api/calculate/",
+    response_model=CalculationResponse,
+    summary="Calcula e salva tarefas",
+    tags=["Tarefas"],
+    description="""
+Adiciona uma ou mais tarefas, calcula o valor de cada uma com base na duração e taxa horária, salva no banco de dados e retorna o resultado.
+
+**Exemplo de corpo da requisição:**
+```json
+{
+  "tasks": [
+    {
+      "description": "Desenvolvimento do endpoint de autenticação",
+      "start_time": "2024-01-10T09:00:00",
+      "end_time": "2024-01-10T11:30:00"
+    }
+  ]
+}
+```
+"""
+)
 def calculate_and_save_tasks(request: CalculationRequest):
     if not request.tasks:
         raise HTTPException(status_code=400, detail="A lista de tarefas não pode estar vazia.")
@@ -134,7 +181,12 @@ def calculate_and_save_tasks(request: CalculationRequest):
         grand_total=grand_total,
     )
 
-@app.get("/tasks", summary="Lista todas as tarefas salvas")
+@app.get(
+    "/tasks",
+    response_model=List[TaskListItem],
+    summary="Lista todas as tarefas salvas",
+    tags=["Tarefas"]
+)
 def list_tasks():
     db = SessionLocal()
     try:
@@ -151,7 +203,7 @@ def list_tasks():
                 "hourly_rate": HOURLY_RATE,
                 "created_at": t.created_at,
             })
-        return jsonable_encoder(result)
+        return result
     finally:
         db.close()
 
