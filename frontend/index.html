@@ -113,6 +113,7 @@
                             <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Duração</th>
                             <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Valor (R$)
                             </th>
+                            <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tasks-table-body" class="bg-white divide-y divide-gray-200">
@@ -325,14 +326,47 @@
         }
 
         /**
+         * Função para excluir uma tarefa pelo ID.
+         */
+        async function deleteTask(taskId) {
+            if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return;
+            clearMessage();
+            try {
+                const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || `Erro HTTP: ${response.status}`);
+                }
+                showMessage("Tarefa excluída com sucesso!", "success");
+                fetchTasks(); // Atualiza a lista e o total
+            } catch (error) {
+                showMessage(`Erro ao excluir: ${error.message}`);
+            }
+        }
+
+        /**
          * Renderiza a tabela de tarefas e o total com base nos dados da API.
          * @param {Array} tasks - Lista de tarefas recebidas do backend.
          */
         function renderTable(tasks) {
             const tbody = document.getElementById('tasks-table-body');
             const tfoot = document.getElementById('tasks-table-footer');
+            const thead = document.querySelector('thead');
             tbody.innerHTML = '';
             tfoot.innerHTML = '';
+            thead.innerHTML = `
+                <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Descrição</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Início</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Fim</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Duração</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Valor (R$)
+                    </th>
+                    <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">Ações</th>
+                </tr>
+            `;
             let grandTotal = 0;
 
             if (tasks.length === 0) {
@@ -356,6 +390,9 @@
                     <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">${formatDateTime(task.end_time)}</td>
                     <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600 font-semibold">${formattedDuration}</td>
                     <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-primary font-bold">R$ ${formattedValue}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-center">
+                        <button onclick="deleteTask(${task.id})" class="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold">Excluir</button>
+                    </td>
                 `;
                 // NOTA: O backend não tem endpoint DELETE, então removemos o botão de exclusão
             });

@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException # type: ignore
+from fastapi import FastAPI, HTTPException, Path # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from pydantic import BaseModel, Field, condecimal # type: ignore
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime # type: ignore
@@ -204,6 +204,28 @@ def list_tasks():
                 "created_at": t.created_at,
             })
         return result
+    finally:
+        db.close()
+
+@app.delete(
+    "/tasks/{task_id}",
+    summary="Remove uma tarefa pelo ID",
+    tags=["Tarefas"]
+)
+def delete_task(task_id: int = Path(..., description="ID da tarefa a ser removida")):
+    db = SessionLocal()
+    try:
+        task = db.query(TaskDB).filter(TaskDB.id == task_id).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada.")
+        db.delete(task)
+        db.commit()
+        logging.info(f"Tarefa {task_id} removida com sucesso.")
+        return {"detail": "Tarefa removida com sucesso."}
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Erro ao remover tarefa: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao remover tarefa.")
     finally:
         db.close()
 
