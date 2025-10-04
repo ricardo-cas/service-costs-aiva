@@ -257,7 +257,7 @@
 
             } catch (error) {
                 console.error("Erro ao carregar tarefas:", error);
-                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">Erro ao conectar à API. Verifique se o Docker está rodando na porta 3000.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">Nenhuma tarefa adicionada</td></tr>';
                 document.getElementById('tasks-table-footer').innerHTML = '';
             }
         }
