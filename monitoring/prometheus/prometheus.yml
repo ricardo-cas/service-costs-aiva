@@ -5,3 +5,5 @@ scrape_configs:
   - job_name: 'backend-api'
     static_configs:
       - targets: ['backend:8000'] # 'backend' é o nome do serviço no docker-compose
+    metrics_path: /metrics
+    scheme: http

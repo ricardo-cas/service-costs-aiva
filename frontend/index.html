@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interface de Faturamento (API)</title>
+    <meta name="description"
+        content="Interface de Faturamento Integrado com API - Gerencie suas atividades faturáveis com facilidade.">
+    <meta name="author" content="Ricardo Costa Alves dos Santos">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <!-- Carrega a fonte Inter do Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Carrega o Tailwind CSS para estilização -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -130,7 +136,7 @@
 
     <script>
         // URL base da API
-        const API_BASE_URL = 'http://localhost:3000';
+        const API_BASE_URL = 'http://localhost:8000';
 
         /**
          * Inicializa o aplicativo.
@@ -254,7 +260,6 @@
             clearMessage();
 
             const description = document.getElementById('descricao').value.trim();
-            // hourlyRate é enviado como número, mas o input é sempre string, entao faz o parse
             const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
@@ -272,37 +277,37 @@
                 return;
             }
 
-            // Ativa o loading
             const btn = document.getElementById('add-task-btn');
             document.getElementById('loading-text').classList.remove('hidden');
             document.getElementById('add-text').classList.add('hidden');
             btn.disabled = true;
 
-            const taskData = {
-                description: description,
-                startTime: startTime,
-                endTime: endTime,
-                hourlyRate: hourlyRate
+            // O backend espera um array de tarefas em { tasks: [...] }
+            const payload = {
+                tasks: [{
+                    description: description,
+                    start_time: startTime,
+                    end_time: endTime
+                }]
             };
 
             try {
-                const response = await fetch(`${API_BASE_URL}/tasks`, {
+                const response = await fetch(`${API_BASE_URL}/api/calculate/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(taskData)
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.error || `Erro HTTP: ${response.status}`);
+                    throw new Error(result.detail || `Erro HTTP: ${response.status}`);
                 }
 
                 showMessage('Tarefa registrada e salva no PostgreSQL!', 'success');
 
-                // Limpa os campos após adicionar (mantém a taxa)
                 document.getElementById('descricao').value = '';
                 document.getElementById('startTime').value = '';
                 document.getElementById('endTime').value = '';
@@ -313,7 +318,6 @@
                 console.error("Erro ao adicionar tarefa:", error);
                 showMessage(`Falha ao registrar: ${error.message}`);
             } finally {
-                // Desativa o loading
                 document.getElementById('loading-text').classList.add('hidden');
                 document.getElementById('add-text').classList.remove('hidden');
                 btn.disabled = false;

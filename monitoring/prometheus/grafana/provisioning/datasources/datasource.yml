@@ -10,3 +10,9 @@ datasources:
     type: loki
     access: proxy
     url: http://loki:3100 # 'loki' é o nome do serviço no docker-compose
+    isDefault: false
+  - name: backend-traces
+    type: backend
+    access: proxy
+    url: http://backend:3100 # 'tempo' é o nome do serviço no docker-compose
+    isDefault: false

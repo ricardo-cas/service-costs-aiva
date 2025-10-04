@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime #
 from sqlalchemy.orm import sessionmaker # type: ignore
 from sqlalchemy.ext.declarative import declarative_base # type: ignore
 from prometheus_fastapi_instrumentator import Instrumentator # type: ignore
+from fastapi.encoders import jsonable_encoder # type: ignore
 
 # --- Configuração de Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -132,6 +133,27 @@ def calculate_and_save_tasks(request: CalculationRequest):
         calculated_tasks=calculated_tasks_output,
         grand_total=grand_total,
     )
+
+@app.get("/tasks", summary="Lista todas as tarefas salvas")
+def list_tasks():
+    db = SessionLocal()
+    try:
+        tasks = db.query(TaskDB).order_by(TaskDB.start_time.desc()).all()
+        result = []
+        for t in tasks:
+            result.append({
+                "id": t.id,
+                "description": t.description,
+                "start_time": t.start_time,
+                "end_time": t.end_time,
+                "duration_hours": t.duration_hours,
+                "calculated_value": t.cost,
+                "hourly_rate": HOURLY_RATE,
+                "created_at": t.created_at,
+            })
+        return jsonable_encoder(result)
+    finally:
+        db.close()
 
 # --- Configuração de Métricas para Prometheus ---
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")

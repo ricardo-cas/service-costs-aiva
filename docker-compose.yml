@@ -1,20 +1,9 @@
 services:
-  proxy:
-    build: ./proxy
-    container_name: proxy_nginx
-    restart: unless-stopped
-    ports:
-    - "8080:80"
-    depends_on:
-    - frontend
-    - backend
-    networks:
-    - frontend-net
-    - backend-net
-
   frontend:
     build: ./frontend
     container_name: frontend_web
+    ports:
+      - "3000:3000"
     restart: unless-stopped
     networks:
     - frontend-net
@@ -24,6 +13,8 @@ services:
     container_name: backend_api
     restart: unless-stopped
     env_file: .env
+    ports:
+      - "8000:8000"
     environment:
     - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${DATABASE_PORT}/${POSTGRES_DB}
     - USER=${POSTGRES_USER}
@@ -37,11 +28,6 @@ services:
     networks:
     - backend-net
     - monitoring-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
   db:
     image: postgres:17-alpine3.21
@@ -86,7 +72,7 @@ services:
     image: 'grafana/grafana:12.0.1'
     container_name: grafana_aiva
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
