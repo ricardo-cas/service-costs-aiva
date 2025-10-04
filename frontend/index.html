@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface de Faturamento (API)</title>
+    <!-- Carrega o Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            /* light blue-gray background */
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#059669', /* emerald-600 */
+                        'secondary': '#34d399', /* emerald-400 */
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="p-4 sm:p-8 flex items-start justify-center min-h-screen" onload="initApp()">
+
+    <div class="w-full max-w-4xl bg-white p-6 sm:p-8 rounded-xl shadow-2xl">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">
+                Faturamento Integrado com API
+            </h1>
+            <p class="text-sm text-gray-500 mt-2">Dados carregados do seu servidor local (http://localhost:3000)</p>
+        </header>
+
+        <!-- Seção de Input de Nova Tarefa -->
+        <section class="mb-8 p-5 border-2 border-primary/50 rounded-lg bg-green-50">
+            <h2 class="text-xl font-semibold text-primary mb-4">Adicionar Nova Atividade</h2>
+
+            <div class="space-y-4">
+                <!-- Taxa Horária e Descrição -->
+                <div class="flex flex-col sm:flex-row sm:space-x-4">
+                    <div class="w-full sm:w-1/2">
+                        <label for="hourlyRate" class="block text-sm font-medium text-gray-700 mb-1">
+                            Taxa Horária Padrão (R$/h)
+                        </label>
+                        <input type="number" id="hourlyRate" value="50.00" min="0.01" step="0.01"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-right font-bold bg-white"
+                            required>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="descricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição da
+                            Atividade</label>
+                        <input type="text" id="descricao"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            placeholder="Ex: Manutenção do banco de dados" required>
+                    </div>
+                </div>
+
+                <!-- Datas e Horas -->
+                <div class="flex flex-col sm:flex-row sm:space-x-4">
+                    <div class="w-full sm:w-1/2">
+                        <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">Início (Data e
+                            Hora)</label>
+                        <input type="datetime-local" id="startTime"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            required>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">Fim (Data e
+                            Hora)</label>
+                        <input type="datetime-local" id="endTime"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            required>
+                    </div>
+                </div>
+
+                <!-- Botão e Mensagens -->
+                <button onclick="addTask()" id="add-task-btn"
+                    class="w-full bg-primary hover:bg-secondary text-white font-semibold py-3 rounded-lg shadow-md transition duration-200">
+                    <span id="loading-text" class="hidden">Salvando...</span>
+                    <span id="add-text">+ Adicionar à Lista</span>
+                </button>
+            </div>
+            <!-- Área de Mensagens de Tarefa -->
+            <div id="message-box-task" class="mt-4 p-3 rounded-lg text-sm hidden" role="alert"></div>
+
+        </section>
+
+        <!-- Tabela de Resultados -->
+        <section>
+            <h2 class="text-xl font-semibold text-primary mb-4">Lista de Atividades Faturáveis (DB)</h2>
+
+            <div id="table-container" class="overflow-x-auto shadow-lg rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Descrição</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Início</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Fim</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Duração</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider">Valor (R$)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-table-body" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="5" class="p-4 text-center text-gray-500">Carregando dados da API...</td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="tasks-table-footer" class="bg-gray-100 border-t border-gray-300">
+                        <!-- Linha do total será inserida aqui pelo JS -->
+                    </tfoot>
+                </table>
+            </div>
+
+            <button onclick="exportData()"
+                class="mt-4 inline-block bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
+                Exportar para CSV (NF-e)
+            </button>
+        </section>
+
+    </div>
+
+    <script>
+        // URL base da API
+        const API_BASE_URL = 'http://localhost:3000';
+
+        /**
+         * Inicializa o aplicativo.
+         */
+        function initApp() {
+            // Define a data de início padrão para a data e hora atual
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const defaultDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('startTime').value = defaultDateTime;
+
+            fetchTasks(); // Carrega as tarefas existentes do backend
+        }
+
+        /**
+         * Exibe mensagens de erro ou sucesso na caixa de mensagens.
+         */
+        function showMessage(message, type = 'error', boxId = 'message-box-task') {
+            const box = document.getElementById(boxId);
+            box.textContent = message;
+            box.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+            if (type === 'error') {
+                box.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                box.classList.add('bg-green-100', 'text-green-700');
+                setTimeout(() => box.classList.add('hidden'), 3000); // Oculta sucesso após 3s
+            }
+        }
+
+        /**
+         * Limpa a caixa de mensagens.
+         */
+        function clearMessage(boxId = 'message-box-task') {
+            document.getElementById(boxId).classList.add('hidden');
+            document.getElementById(boxId).textContent = '';
+        }
+
+        /**
+         * Converte a diferença de milissegundos para horas decimais.
+         */
+        function msToDecimalHours(ms) {
+            return ms / 3600000;
+        }
+
+        /**
+         * Converte a diferença de milissegundos para um formato legível (Hh Mm).
+         */
+        function msToFormattedDuration(ms) {
+            if (ms < 60000) return 'Menos de 1m';
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+            let durationString = '';
+            if (hours > 0) {
+                durationString += `${hours}h`;
+            }
+            if (minutes > 0) {
+                durationString += `${minutes}m`;
+            }
+            return durationString.trim();
+        }
+
+        /**
+         * Formata uma data para exibição na tabela.
+         */
+        function formatDateTime(dateString) {
+            // A API retorna TIMESTAMP WITH TIME ZONE (string ISO)
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        /**
+         * Formata o valor numérico para BRL (R$).
+         */
+        function formatValueBRL(value) {
+            return parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // ===========================================
+        // LÓGICA DE COMUNICAÇÃO COM A API
+        // ===========================================
+
+        /**
+         * Busca todas as tarefas da API e as renderiza.
+         */
+        async function fetchTasks() {
+            const tbody = document.getElementById('tasks-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Carregando dados da API...</td></tr>';
+            clearMessage();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/tasks`);
+
+                if (!response.ok) {
+                    throw new Error(`Erro de rede ou servidor: ${response.status}`);
+                }
+
+                const tasks = await response.json();
+                renderTable(tasks);
+
+            } catch (error) {
+                console.error("Erro ao carregar tarefas:", error);
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">Erro ao conectar à API. Verifique se o Docker está rodando na porta 3000.</td></tr>';
+                document.getElementById('tasks-table-footer').innerHTML = '';
+            }
+        }
+
+        /**
+         * Envia uma nova tarefa para a API.
+         */
+        async function addTask() {
+            clearMessage();
+
+            const description = document.getElementById('descricao').value.trim();
+            // hourlyRate é enviado como número, mas o input é sempre string, entao faz o parse
+            const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!description || !startTime || !endTime || isNaN(hourlyRate) || hourlyRate <= 0) {
+                showMessage('Por favor, preencha a descrição, datas e garanta que a Taxa Horária seja válida.');
+                return;
+            }
+
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+
+            if (end <= start) {
+                showMessage('A Data/Hora de Fim deve ser posterior à Data/Hora de Início.');
+                return;
+            }
+
+            // Ativa o loading
+            const btn = document.getElementById('add-task-btn');
+            document.getElementById('loading-text').classList.remove('hidden');
+            document.getElementById('add-text').classList.add('hidden');
+            btn.disabled = true;
+
+            const taskData = {
+                description: description,
+                startTime: startTime,
+                endTime: endTime,
+                hourlyRate: hourlyRate
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(taskData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || `Erro HTTP: ${response.status}`);
+                }
+
+                showMessage('Tarefa registrada e salva no PostgreSQL!', 'success');
+
+                // Limpa os campos após adicionar (mantém a taxa)
+                document.getElementById('descricao').value = '';
+                document.getElementById('startTime').value = '';
+                document.getElementById('endTime').value = '';
+
+                fetchTasks(); // Atualiza a lista após salvar
+
+            } catch (error) {
+                console.error("Erro ao adicionar tarefa:", error);
+                showMessage(`Falha ao registrar: ${error.message}`);
+            } finally {
+                // Desativa o loading
+                document.getElementById('loading-text').classList.add('hidden');
+                document.getElementById('add-text').classList.remove('hidden');
+                btn.disabled = false;
+            }
+        }
+
+        /**
+         * Renderiza a tabela de tarefas e o total com base nos dados da API.
+         * @param {Array} tasks - Lista de tarefas recebidas do backend.
+         */
+        function renderTable(tasks) {
+            const tbody = document.getElementById('tasks-table-body');
+            const tfoot = document.getElementById('tasks-table-footer');
+            tbody.innerHTML = '';
+            tfoot.innerHTML = '';
+            let grandTotal = 0;
+
+            if (tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nenhuma tarefa encontrada no banco de dados.</td></tr>';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const durationMs = task.duration_hours * 3600000; // Converte horas decimais da API para ms
+                grandTotal += parseFloat(task.calculated_value);
+
+                const formattedValue = formatValueBRL(task.calculated_value);
+                const formattedDuration = msToFormattedDuration(durationMs);
+
+                const row = tbody.insertRow();
+                row.className = 'hover:bg-gray-50 transition duration-150';
+
+                row.innerHTML = `
+                    <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${task.description}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">${formatDateTime(task.start_time)}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">${formatDateTime(task.end_time)}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600 font-semibold">${formattedDuration}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-primary font-bold">R$ ${formattedValue}</td>
+                `;
+                // NOTA: O backend não tem endpoint DELETE, então removemos o botão de exclusão
+            });
+
+            // Linha do Rodapé (Total)
+            const totalFormatted = formatValueBRL(grandTotal);
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-4 text-right text-lg font-bold text-gray-800">TOTAL GERAL:</td>
+                    <td colspan="1" class="px-4 py-4 text-right text-2xl font-extrabold text-primary">R$ ${totalFormatted}</td>
+                </tr>
+            `;
+        }
+
+        /**
+         * Exporta os dados da tabela para um arquivo CSV.
+         * Esta função busca os dados da API novamente para garantir que a exportação esteja atualizada.
+         */
+        async function exportData() {
+            clearMessage();
+            try {
+                const response = await fetch(`${API_BASE_URL}/tasks`);
+                const tasks = await response.json();
+
+                if (tasks.length === 0) {
+                    showMessage("Não há dados para exportar.", 'error');
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+
+                // Cabeçalho do CSV - usando nomes de colunas do DB
+                csvContent += "Descrição da Atividade,Início,Fim,Duração (Horas Decimais),Valor (R$),Taxa Horária (R$/h)\n";
+
+                // Linhas de dados
+                tasks.forEach(task => {
+                    const row = [
+                        `"${task.description.replace(/"/g, '""')}"`, // Escape de aspas duplas
+                        task.start_time,
+                        task.end_time,
+                        parseFloat(task.duration_hours).toFixed(4).replace('.', ','),
+                        parseFloat(task.calculated_value).toFixed(2).replace('.', ','),
+                        parseFloat(task.hourly_rate).toFixed(2).replace('.', ',')
+                    ];
+                    csvContent += row.join(";") + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `faturamento_nfe_${new Date().toISOString().slice(0, 10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showMessage("Dados exportados para CSV com sucesso!", 'success');
+
+            } catch (error) {
+                showMessage(`Erro ao exportar: Não foi possível carregar dados da API.`, 'error');
+            }
+        }
+
+    </script>
+</body>
+
+</html>
