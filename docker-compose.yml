@@ -25,12 +25,12 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-    - DATABASE_URL=postgresql://POSTGRES
-    - USER={POSTGRES_USER}
-    - PASSWORD={POSTGRES_PASSWORD}
-    - HOST={DATABASE_HOST}
-    - PORT={DATABASE_PORT}
-    - DB={POSTGRES_DB}
+    - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${DATABASE_PORT}/${POSTGRES_DB}
+    - USER=${POSTGRES_USER}
+    - PASSWORD=${POSTGRES_PASSWORD}
+    - HOST=db
+    - PORT=${DATABASE_PORT}
+    - DB=${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
 
   db:
     image: postgres:17-alpine3.21
-    container_name: postgres_db
+    container_name: postgres_db_aiva
     env_file: .env
     volumes:
     - postgres_data:/var/lib/postgresql/data/
@@ -65,27 +65,26 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.37.0
-    container_name: prometheus
+    container_name: prometheus_aiva
     restart: unless-stopped
     volumes:
-    - ./monitoring/prometheus:/etc/prometheus
-    - prometheus_data:/prometheus
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     command:
-    - '--config.file=/etc/prometheus/prometheus.yml'
-    - '--config.file=/prometheus/prometheus.yml'
-    - '--storage.tsdb.path=/prometheus/data'
-    - '--web.listen-address=0.0.0.0:9090'
-    - '--web.external-url=http://localhost:9090'
-    - '--web.route-prefix=/'
-    - '--web.enable-lifecycle'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus/data'
+      - '--web.listen-address=0.0.0.0:9090'
+      - '--web.external-url=http://localhost:9090'
+      - '--web.route-prefix=/'
+      - '--web.enable-lifecycle'
     networks:
-    - monitoring-net
+      - monitoring-net
 
   grafana:
     image: 'grafana/grafana:12.0.1'
-    container_name: grafana
+    container_name: grafana_aiva
     ports:
       - "3000:3000"
     environment:
@@ -100,7 +99,7 @@ services:
 
   loki:
     image: grafana/loki:2.9.0
-    container_name: loki
+    container_name: loki_aiva
     restart: unless-stopped
     ports:
       - "3100:3100"
@@ -115,11 +114,12 @@ services:
 
   promtail:
     image: grafana/promtail:2.6.1
-    container_name: promtail
+    container_name: promtail_aiva
+    restart: unless-stopped
     volumes:
     - /var/lib/docker/containers:/var/lib/docker/containers:ro
     - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/docker-config.yaml
+    # command: -config.file=/etc/promtail/docker-config.yaml
     depends_on:
     - loki
     networks:
