@@ -1,0 +1,110 @@
+
+services:
+  proxy:
+    build: ./proxy
+    container_name: proxy_nginx
+    ports:
+    - "8080:80"
+    depends_on:
+    - frontend
+    - backend
+    networks:
+    - frontend-net
+    - backend-net
+
+  frontend:
+    build: ./frontend
+    container_name: frontend_web
+    networks:
+    - frontend-net
+
+  backend:
+    build: ./backend
+    container_name: backend_api
+    env_file: .env
+    environment:
+    - DATABASE_URL=postgresql://POSTGRES
+    - USER={POSTGRES_USER}
+    - PASSWORD={POSTGRES_PASSWORD}
+    - HOST={DATABASE_HOST}
+    - PORT={DATABASE_PORT}
+    - DB={POSTGRES_DB}
+    depends_on:
+    db:
+      condition: service_healthy
+    networks:
+    - backend-net
+    - monitoring-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  db:
+    image: postgres:13-alpine
+    container_name: postgres_db
+    env_file: .env
+    volumes:
+    - postgres_data:/var/lib/postgresql/data/
+    networks:
+    - backend-net
+    healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+
+    prometheus:
+      image: prom/prometheus:v2.37.0
+      container_name: prometheus
+      volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+      command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      networks:
+      - monitoring-net
+
+    grafana:
+      image: grafana/grafana:8.5.2
+      container_name: grafana
+      ports:
+      - "3000:3000"
+      volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+      networks:
+      - monitoring-net
+
+    loki:
+      image: grafana/loki:2.6.1
+      container_name: loki
+      command: -config.file=/etc/loki/local-config.yaml
+      networks:
+      - monitoring-net
+
+    promtail:
+      image: grafana/promtail:2.6.1
+      container_name: promtail
+      volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      command: -config.file=/etc/promtail/docker-config.yaml
+      depends_on:
+      - loki
+      networks:
+      - monitoring-net
+
+volumes:
+postgres_data:
+prometheus_data:
+grafana_data:
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
