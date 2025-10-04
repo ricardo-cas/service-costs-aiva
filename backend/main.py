@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException # type: ignore
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, condecimal
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
