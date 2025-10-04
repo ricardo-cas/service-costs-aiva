@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interface de Faturamento (API)</title>
-    <meta name="description"
-        content="Interface de Faturamento Integrado com API - Gerencie suas atividades faturáveis com facilidade.">
+    <meta name="description" content="Painel de Faturamento de Serviços - Gerencie suas atividades com facilidade.">
     <meta name="author" content="Ricardo Costa Alves dos Santos">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Carrega a fonte Inter do Google Fonts -->
@@ -28,6 +27,7 @@
                     colors: {
                         'primary': '#059669', /* emerald-600 */
                         'secondary': '#34d399', /* emerald-400 */
+                        'accent': '#10b981' /* emerald-500 */
                     }
                 }
             }
@@ -40,9 +40,8 @@
     <div class="w-full max-w-4xl bg-white p-6 sm:p-8 rounded-xl shadow-2xl">
         <header class="text-center mb-6">
             <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">
-                Faturamento Integrado com API
+                Painel de Faturamento de Serviços
             </h1>
-            <p class="text-sm text-gray-500 mt-2">Dados carregados do seu servidor local (http://localhost:3000)</p>
         </header>
 
         <!-- Seção de Input de Nova Tarefa -->
@@ -101,11 +100,11 @@
 
         <!-- Tabela de Resultados -->
         <section>
-            <h2 class="text-xl font-semibold text-primary mb-4">Lista de Atividades Faturáveis (DB)</h2>
+            <h2 class="text-xl font-semibold text-primary mb-4">Lista de Atividades Realizadas</h2>
 
             <div id="table-container" class="overflow-x-auto shadow-lg rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-primary text-white">
+                    <thead class="bg-accent text-white">
                         <tr>
                             <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Descrição</th>
                             <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Início</th>
