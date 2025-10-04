@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException # type: ignore
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, condecimal
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from prometheus_fastapi_instrumentator import Instrumentator
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from pydantic import BaseModel, Field, condecimal # type: ignore
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime # type: ignore
+from sqlalchemy.orm import sessionmaker # type: ignore
+from sqlalchemy.ext.declarative import declarative_base # type: ignore
+from prometheus_fastapi_instrumentator import Instrumentator # type: ignore
 
 # --- Configuração de Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
